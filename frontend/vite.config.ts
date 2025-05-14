@@ -12,4 +12,11 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  server: {
+    //when using vite server, instead look for our go server
+    proxy: {
+      "/api": "http://localhost:8080",
+    },
+  },
+  base: "./",
 });
