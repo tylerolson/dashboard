@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import type { StatsResponse } from "@/responses.ts";
+import StatBox from "@/components/StatBox.vue";
 
 const stats = ref<StatsResponse>();
 
@@ -12,7 +13,7 @@ async function fetchStats() {
     }
 
     const data: StatsResponse = await response.json();
-    console.log(data);
+    console.log("Got stats response:", data);
 
     stats.value = data;
   } catch (error: unknown) {
@@ -29,11 +30,10 @@ onMounted(() => {
   <div>
     <h3>StatsBox</h3>
     <div v-if="stats != undefined">
-      <pre>CPU Info: {{ stats.cpu_info }}</pre>
-      <pre>CPU Percent: {{ stats.cpu_percent }}</pre>
-      <pre>Disk: {{ stats.disk }}</pre>
-      <pre>Host Info: {{ stats.host_info }}</pre>
-      <pre>Memory: {{ stats.memory }}</pre>
+      <StatBox title="CPU Info" :stat="stats.cpuInfo"></StatBox>
+      <StatBox title="Disk" :stat="stats.diskInfo"></StatBox>
+      <StatBox title="Host Info" :stat="stats.hostInfo"></StatBox>
+      <StatBox title="Memory" :stat="stats.memInfo"></StatBox>
     </div>
     <div v-else>
       <p>loading...</p>

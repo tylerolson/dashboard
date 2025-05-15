@@ -1,45 +1,22 @@
-export interface StatsResponse {
-  cpu_info: CpuInfo[];
-  cpu_percent: number[];
-  disk: Disk;
-  host_info: HostInfo;
-  memory: Memory;
-}
-
 export interface CpuInfo {
-  cpu: number;
-  vendorId: string;
-  family: string;
-  model: string;
-  stepping: number;
-  physicalId: string;
-  coreId: string;
+  cpuPercent: number;
   cores: number;
   modelName: string;
   mhz: number;
-  cacheSize: number;
-  flags: any;
-  microcode: string;
 }
 
-export interface Disk {
-  path: string;
-  fstype: string;
-  total: number;
-  free: number;
-  used: number;
+export interface MemInfo {
+  availableBytes: number;
+  totalBytes: number;
+  usedBytes: number;
   usedPercent: number;
-  inodesTotal: number;
-  inodesUsed: number;
-  inodesFree: number;
-  inodesUsedPercent: number;
 }
 
 export interface HostInfo {
-  hostname: string;
+  hostName: string;
   uptime: number;
   bootTime: number;
-  procs: number;
+  processes: number;
   os: string;
   platform: string;
   platformFamily: string;
@@ -48,12 +25,19 @@ export interface HostInfo {
   kernelArch: string;
   virtualizationSystem: string;
   virtualizationRole: string;
-  hostId: string;
 }
 
-export interface Memory {
-  available: number;
-  total: number;
-  used: number;
-  used_percent: number;
+export interface DiskInfo {
+  fsType: string;
+  totalBytes: number;
+  freeBytes: number;
+  usedBytes: number;
+  usedPercent: number;
+}
+
+export interface StatsResponse {
+  cpuInfo: CpuInfo;
+  memInfo: MemInfo;
+  hostInfo: HostInfo;
+  diskInfo: DiskInfo;
 }

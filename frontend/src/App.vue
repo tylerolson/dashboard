@@ -1,12 +1,12 @@
 <script setup lang="ts">
 // import HelloWorld from "./components/HelloWorld.vue";
-import StatsBox from "@/components/StatsBox.vue";
+import StatsList from "@/components/StatsList.vue";
 </script>
 
 <template>
   <div>
     <h1>Dashboard</h1>
-    <StatsBox></StatsBox>
+    <StatsList></StatsList>
   </div>
 </template>
 
