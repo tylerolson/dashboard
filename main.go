@@ -106,13 +106,13 @@ func statsHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	prettyData, err := json.MarshalIndent(response, "", "   ")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	fmt.Println(string(prettyData))
+	//
+	//prettyData, err := json.MarshalIndent(response, "", "   ")
+	//if err != nil {
+	//	w.WriteHeader(http.StatusInternalServerError)
+	//	return
+	//}
+	//fmt.Println(string(prettyData))
 }
 
 func main() {

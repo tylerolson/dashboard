@@ -1,12 +1,11 @@
 <script setup lang="ts">
-// import HelloWorld from "./components/HelloWorld.vue";
-import StatsList from "@/components/StatsList.vue";
+import StatsGrid from "@/components/StatsGrid.vue";
 </script>
 
 <template>
   <div>
-    <h1>Dashboard</h1>
-    <StatsList></StatsList>
+    <p class="text-3xl font-bold">Dashboard</p>
+    <StatsGrid></StatsGrid>
   </div>
 </template>
 

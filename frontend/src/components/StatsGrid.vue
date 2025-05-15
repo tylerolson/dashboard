@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import type { StatsResponse } from "@/responses.ts";
-import StatBox from "@/components/StatBox.vue";
+import StatsItem from "@/components/StatsItem.vue";
 
 const stats = ref<StatsResponse>();
+
+const width = window.innerWidth;
+const height = window.innerHeight;
 
 async function fetchStats() {
   try {
@@ -27,13 +30,16 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <h3>StatsBox</h3>
-    <div v-if="stats != undefined">
-      <StatBox title="CPU Info" :stat="stats.cpuInfo"></StatBox>
-      <StatBox title="Disk" :stat="stats.diskInfo"></StatBox>
-      <StatBox title="Host Info" :stat="stats.hostInfo"></StatBox>
-      <StatBox title="Memory" :stat="stats.memInfo"></StatBox>
+  <div class="h-full">
+    <h3>StatsBox {{ width }} x {{ height }}</h3>
+    <div
+      v-if="stats != undefined"
+      class="grid grid-cols-4 gap-5 px-5 md:grid-cols-8 lg:grid-cols-12"
+    >
+      <StatsItem title="CPU Info" :stat="stats.cpuInfo"></StatsItem>
+      <StatsItem title="Disk" :stat="stats.diskInfo"></StatsItem>
+      <StatsItem title="Host Info" :stat="stats.hostInfo"></StatsItem>
+      <StatsItem title="Memory" :stat="stats.memInfo"></StatsItem>
     </div>
     <div v-else>
       <p>loading...</p>

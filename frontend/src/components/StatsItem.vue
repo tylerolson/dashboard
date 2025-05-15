@@ -13,11 +13,10 @@ function camelToTitleCase(input: string) {
 </script>
 
 <template>
-  <div>
-    <h6>{{ title }}</h6>
+  <div class="col-span-4 rounded-xl border border-zinc-700 bg-zinc-900 p-4 shadow">
+    <p class="pb-2 text-2xl font-bold">{{ title }}</p>
     <div v-for="(value, key) in stat" :key="key">
-      {{ camelToTitleCase(key) }} - {{ value }}
-      <span></span>
+      <span class="font-bold">{{ camelToTitleCase(key) }}</span> - {{ value }}
     </div>
   </div>
 </template>
