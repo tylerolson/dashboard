@@ -1,18 +1,24 @@
-export interface CpuInfo {
-  cpuPercent: number;
-  cores: number;
-  modelName: string;
-  mhz: number;
-}
-
-export interface MemInfo {
-  availableBytes: number;
-  totalBytes: number;
-  usedBytes: number;
+export interface CpuStat {
   usedPercent: number;
 }
 
+export interface DiskStat {
+  usedPercent: number;
+  totalGbs: number;
+  usedGbs: number;
+}
+
+export interface MemStat {
+  usedPercent: number;
+  totalGbs: number;
+  usedGbs: number;
+}
+
 export interface HostInfo {
+  cpuCores: number;
+  cpuName: string;
+  cpuMhz: number;
+  fsType: string;
   hostName: string;
   uptime: number;
   bootTime: number;
@@ -27,17 +33,9 @@ export interface HostInfo {
   virtualizationRole: string;
 }
 
-export interface DiskInfo {
-  fsType: string;
-  totalBytes: number;
-  freeBytes: number;
-  usedBytes: number;
-  usedPercent: number;
-}
-
 export interface StatsResponse {
-  cpuInfo: CpuInfo;
-  memInfo: MemInfo;
+  cpuStat: CpuStat;
+  diskStat: DiskStat;
+  memStat: MemStat;
   hostInfo: HostInfo;
-  diskInfo: DiskInfo;
 }

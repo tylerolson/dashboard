@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"time"
 
@@ -20,64 +21,67 @@ func statsHandler(w http.ResponseWriter, r *http.Request) {
 	hostInfo, _ := host.Info()
 	diskStat, _ := disk.Usage("/")
 
-	type CPUInfo struct {
-		CPUPercent float64 `json:"cpuPercent"`
-		Cores      int32   `json:"cores"`
-		ModelName  string  `json:"modelName"`
-		MHZ        float64 `json:"mhz"`
-	}
-
-	type MemInfo struct {
-		AvailableBytes uint64  `json:"availableBytes"`
-		TotalBytes     uint64  `json:"totalBytes"`
-		UsedBytes      uint64  `json:"usedBytes"`
-		UsedPercent    float64 `json:"usedPercent"`
-	}
-
-	type HostInfo struct {
-		HostName             string `json:"hostName"`
-		Uptime               uint64 `json:"uptime"`
-		BootTime             uint64 `json:"bootTime"`
-		Processes            uint64 `json:"processes"`
-		OS                   string `json:"os"`
-		Platform             string `json:"platform"`
-		PlatformFamily       string `json:"platformFamily"`
-		PlatformVersion      string `json:"platformVersion"`
-		KernelVersion        string `json:"kernelVersion"`
-		KernelArch           string `json:"kernelArch"`
-		VirtualizationSystem string `json:"virtualizationSystem"`
-		VirtualizationRole   string `json:"virtualizationRole"`
-	}
-
-	type DiskInfo struct {
-		FSType      string  `json:"fsType"`
-		TotalBytes  uint64  `json:"totalBytes"`
-		FreeBytes   uint64  `json:"freeBytes"`
-		UsedBytes   uint64  `json:"usedBytes"`
+	type CpuStat struct {
 		UsedPercent float64 `json:"usedPercent"`
 	}
 
+	type DiskStat struct {
+		UsedPercent float64 `json:"usedPercent"`
+		TotalGbs    float64 `json:"totalGbs"`
+		UsedGbs     float64 `json:"usedGbs"`
+	}
+
+	type MemStat struct {
+		UsedPercent float64 `json:"usedPercent"`
+		TotalGbs    float64 `json:"totalGbs"`
+		UsedGbs     float64 `json:"usedGbs"`
+	}
+
+	type HostInfo struct {
+		CpuCores             int32   `json:"cpuCores"`
+		CpuName              string  `json:"cpuName"`
+		CpuMhz               float64 `json:"cpuMhz"`
+		FSType               string  `json:"fsType"`
+		HostName             string  `json:"hostName"`
+		Uptime               uint64  `json:"uptime"`
+		BootTime             uint64  `json:"bootTime"`
+		Processes            uint64  `json:"processes"`
+		OS                   string  `json:"os"`
+		Platform             string  `json:"platform"`
+		PlatformFamily       string  `json:"platformFamily"`
+		PlatformVersion      string  `json:"platformVersion"`
+		KernelVersion        string  `json:"kernelVersion"`
+		KernelArch           string  `json:"kernelArch"`
+		VirtualizationSystem string  `json:"virtualizationSystem"`
+		VirtualizationRole   string  `json:"virtualizationRole"`
+	}
+
 	type StatsResponse struct {
-		CPUInfo  CPUInfo  `json:"cpuInfo"`
-		MemInfo  MemInfo  `json:"memInfo"`
+		CpuStat  CpuStat  `json:"cpuStat"`
+		DiskStat DiskStat `json:"diskStat"`
+		MemStat  MemStat  `json:"memStat"`
 		HostInfo HostInfo `json:"hostInfo"`
-		Disk     DiskInfo `json:"diskInfo"`
 	}
 
 	response := StatsResponse{
-		CPUInfo: CPUInfo{
-			CPUPercent: cpuPercentages[0],
-			Cores:      cpuInfos[0].Cores,
-			ModelName:  cpuInfos[0].ModelName,
-			MHZ:        cpuInfos[0].Mhz,
+		CpuStat: CpuStat{
+			UsedPercent: math.Round(cpuPercentages[0]*100) / 100,
 		},
-		MemInfo: MemInfo{
-			AvailableBytes: virtualMemory.Available,
-			TotalBytes:     virtualMemory.Total,
-			UsedBytes:      virtualMemory.Used,
-			UsedPercent:    virtualMemory.UsedPercent,
+		DiskStat: DiskStat{
+			UsedPercent: math.Round(diskStat.UsedPercent*100) / 100,
+			TotalGbs:    math.Round(float64(diskStat.Total)/1e9*100) / 100,
+			UsedGbs:     math.Round(float64(diskStat.Used)/1e9*100) / 100,
+		},
+		MemStat: MemStat{
+			UsedPercent: math.Round(virtualMemory.UsedPercent*100) / 100,
+			TotalGbs:    math.Round(float64(virtualMemory.Total)/1e9*100) / 100,
+			UsedGbs:     math.Round(float64(virtualMemory.Used)/1e9*100) / 100,
 		},
 		HostInfo: HostInfo{
+			CpuCores:             cpuInfos[0].Cores,
+			CpuName:              cpuInfos[0].ModelName,
+			CpuMhz:               cpuInfos[0].Mhz,
+			FSType:               diskStat.Fstype,
 			HostName:             hostInfo.Hostname,
 			Uptime:               hostInfo.Uptime,
 			BootTime:             hostInfo.BootTime,
@@ -91,13 +95,6 @@ func statsHandler(w http.ResponseWriter, r *http.Request) {
 			VirtualizationSystem: hostInfo.VirtualizationSystem,
 			VirtualizationRole:   hostInfo.VirtualizationRole,
 		},
-		Disk: DiskInfo{
-			FSType:      diskStat.Fstype,
-			TotalBytes:  diskStat.Total,
-			FreeBytes:   diskStat.Free,
-			UsedBytes:   diskStat.Used,
-			UsedPercent: diskStat.UsedPercent,
-		},
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -106,7 +103,7 @@ func statsHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	//
+
 	//prettyData, err := json.MarshalIndent(response, "", "   ")
 	//if err != nil {
 	//	w.WriteHeader(http.StatusInternalServerError)
