@@ -4,12 +4,14 @@ import { ref } from "vue";
 
 export const useStatStore = defineStore("statStore", () => {
   const stats = ref<StatsResponse>();
+  let intervalId = 0;
 
   async function fetchStats() {
     try {
       const response: Response = await fetch("api/stats");
       if (!response.ok) {
-        throw new Error(`HTTP error: status: ${response.status}`);
+        console.error(`HTTP error: status: ${response.status}`);
+        return;
       }
 
       const data: StatsResponse = await response.json();
@@ -21,5 +23,21 @@ export const useStatStore = defineStore("statStore", () => {
     }
   }
 
-  return { stats, fetchStats };
+  function startInterval(timeMs: number = 3000) {
+    if (intervalId != 0) {
+      return;
+    }
+
+    fetchStats();
+    intervalId = setInterval(fetchStats, timeMs);
+  }
+
+  function stopInterval() {
+    if (intervalId != 0) {
+      clearInterval(intervalId);
+      intervalId = 0;
+    }
+  }
+
+  return { stats, fetchStats, startInterval, stopInterval };
 });
