@@ -1,14 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/shirou/gopsutil/v4/common"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
@@ -57,12 +58,12 @@ type StatsResponse struct {
 	HostInfo HostInfo `json:"hostInfo"`
 }
 
-func fetchStats() StatsResponse {
-	cpuInfos, _ := cpu.Info()
-	cpuPercentages, _ := cpu.Percent(time.Second, false)
-	virtualMemory, _ := mem.VirtualMemory()
-	hostInfo, _ := host.Info()
-	diskStat, _ := disk.Usage("/")
+func fetchStats(ctx context.Context) StatsResponse {
+	cpuInfos, _ := cpu.InfoWithContext(ctx)
+	cpuPercentages, _ := cpu.PercentWithContext(ctx, time.Second, false)
+	virtualMemory, _ := mem.VirtualMemoryWithContext(ctx)
+	hostInfo, _ := host.InfoWithContext(ctx)
+	diskStat, _ := disk.UsageWithContext(ctx, "/")
 
 	response := StatsResponse{
 		CpuStat: CpuStat{
@@ -101,14 +102,16 @@ func fetchStats() StatsResponse {
 	return response
 }
 
-func statsHandler(w http.ResponseWriter, r *http.Request) {
-	response := fetchStats()
+func getStatsHandler(ctx context.Context) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		response := fetchStats(ctx)
 
-	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(response)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(response)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
@@ -118,12 +121,23 @@ func main() {
 		PORT = "80"
 	}
 
-	http.HandleFunc("/api/stats", statsHandler)
+	env := common.EnvMap{}
+	if proc := os.Getenv("HOST_PROC"); proc != "" {
+		env[common.HostProcEnvKey] = proc
+	}
+	if sys := os.Getenv("HOST_SYS"); sys != "" {
+		env[common.HostSysEnvKey] = sys
+	}
+	ctx := context.WithValue(context.Background(), common.EnvKey, env)
+
+	http.HandleFunc("/api/stats", getStatsHandler(ctx))
 
 	fs := http.FileServer(http.Dir("frontend/dist"))
 	http.Handle("/", fs)
 
-	fmt.Println("Serving on :" + PORT)
-	fmt.Println("Set $PORT to change")
-	slog.Error("error starting server: ", "error", http.ListenAndServe(":"+PORT, nil))
+	slog.Info("Starting server", "port", PORT)
+	if err := http.ListenAndServe(":"+PORT, nil); err != nil {
+		slog.Error("server failed", "error", err)
+		os.Exit(1)
+	}
 }
