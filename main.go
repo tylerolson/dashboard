@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -112,11 +113,17 @@ func statsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	PORT := os.Getenv("PORT")
+	if PORT == "" {
+		PORT = "80"
+	}
+
 	http.HandleFunc("/api/stats", statsHandler)
 
 	fs := http.FileServer(http.Dir("frontend/dist"))
 	http.Handle("/", fs)
 
-	fmt.Println("Serving on http://localhost:8080")
-	slog.Error("error starting server: ", "error", http.ListenAndServe(":8080", nil))
+	fmt.Println("Serving on :" + PORT)
+	fmt.Println("Set $PORT to change")
+	slog.Error("error starting server: ", "error", http.ListenAndServe(":"+PORT, nil))
 }

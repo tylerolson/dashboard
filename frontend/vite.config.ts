@@ -17,7 +17,7 @@ export default defineConfig({
     //when using vite server, instead look for our go server
     host: "0.0.0.0",
     proxy: {
-      "/api": "http://localhost:8080",
+      "/api": "http://localhost:80",
     },
   },
   base: "./",
