@@ -14,54 +14,54 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
-func statsHandler(w http.ResponseWriter, r *http.Request) {
+type CpuStat struct {
+	UsedPercent float64 `json:"usedPercent"`
+}
+
+type DiskStat struct {
+	UsedPercent float64 `json:"usedPercent"`
+	TotalGbs    float64 `json:"totalGbs"`
+	UsedGbs     float64 `json:"usedGbs"`
+}
+
+type MemStat struct {
+	UsedPercent float64 `json:"usedPercent"`
+	TotalGbs    float64 `json:"totalGbs"`
+	UsedGbs     float64 `json:"usedGbs"`
+}
+
+type HostInfo struct {
+	CpuCores             int32   `json:"cpuCores"`
+	CpuName              string  `json:"cpuName"`
+	CpuMhz               float64 `json:"cpuMhz"`
+	FSType               string  `json:"fsType"`
+	HostName             string  `json:"hostName"`
+	Uptime               uint64  `json:"uptime"`
+	BootTime             uint64  `json:"bootTime"`
+	Processes            uint64  `json:"processes"`
+	OS                   string  `json:"os"`
+	Platform             string  `json:"platform"`
+	PlatformFamily       string  `json:"platformFamily"`
+	PlatformVersion      string  `json:"platformVersion"`
+	KernelVersion        string  `json:"kernelVersion"`
+	KernelArch           string  `json:"kernelArch"`
+	VirtualizationSystem string  `json:"virtualizationSystem"`
+	VirtualizationRole   string  `json:"virtualizationRole"`
+}
+
+type StatsResponse struct {
+	CpuStat  CpuStat  `json:"cpuStat"`
+	DiskStat DiskStat `json:"diskStat"`
+	MemStat  MemStat  `json:"memStat"`
+	HostInfo HostInfo `json:"hostInfo"`
+}
+
+func fetchStats() StatsResponse {
 	cpuInfos, _ := cpu.Info()
 	cpuPercentages, _ := cpu.Percent(time.Second, false)
 	virtualMemory, _ := mem.VirtualMemory()
 	hostInfo, _ := host.Info()
 	diskStat, _ := disk.Usage("/")
-
-	type CpuStat struct {
-		UsedPercent float64 `json:"usedPercent"`
-	}
-
-	type DiskStat struct {
-		UsedPercent float64 `json:"usedPercent"`
-		TotalGbs    float64 `json:"totalGbs"`
-		UsedGbs     float64 `json:"usedGbs"`
-	}
-
-	type MemStat struct {
-		UsedPercent float64 `json:"usedPercent"`
-		TotalGbs    float64 `json:"totalGbs"`
-		UsedGbs     float64 `json:"usedGbs"`
-	}
-
-	type HostInfo struct {
-		CpuCores             int32   `json:"cpuCores"`
-		CpuName              string  `json:"cpuName"`
-		CpuMhz               float64 `json:"cpuMhz"`
-		FSType               string  `json:"fsType"`
-		HostName             string  `json:"hostName"`
-		Uptime               uint64  `json:"uptime"`
-		BootTime             uint64  `json:"bootTime"`
-		Processes            uint64  `json:"processes"`
-		OS                   string  `json:"os"`
-		Platform             string  `json:"platform"`
-		PlatformFamily       string  `json:"platformFamily"`
-		PlatformVersion      string  `json:"platformVersion"`
-		KernelVersion        string  `json:"kernelVersion"`
-		KernelArch           string  `json:"kernelArch"`
-		VirtualizationSystem string  `json:"virtualizationSystem"`
-		VirtualizationRole   string  `json:"virtualizationRole"`
-	}
-
-	type StatsResponse struct {
-		CpuStat  CpuStat  `json:"cpuStat"`
-		DiskStat DiskStat `json:"diskStat"`
-		MemStat  MemStat  `json:"memStat"`
-		HostInfo HostInfo `json:"hostInfo"`
-	}
 
 	response := StatsResponse{
 		CpuStat: CpuStat{
@@ -97,19 +97,18 @@ func statsHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
+	return response
+}
+
+func statsHandler(w http.ResponseWriter, r *http.Request) {
+	response := fetchStats()
+
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	//prettyData, err := json.MarshalIndent(response, "", "   ")
-	//if err != nil {
-	//	w.WriteHeader(http.StatusInternalServerError)
-	//	return
-	//}
-	//fmt.Println(string(prettyData))
 }
 
 func main() {
@@ -119,5 +118,5 @@ func main() {
 	http.Handle("/", fs)
 
 	fmt.Println("Serving on http://localhost:8080")
-	slog.Error("error starting server: ", http.ListenAndServe(":8080", nil))
+	slog.Error("error starting server: ", "error", http.ListenAndServe(":8080", nil))
 }
