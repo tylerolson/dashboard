@@ -33,7 +33,8 @@ type MemStat struct {
 }
 
 type HostInfo struct {
-	CpuCores             int32   `json:"cpuCores"`
+	CpuCores             int     `json:"cpuCores"`
+	CpuThreads           int     `json:"cpuThreads"`
 	CpuName              string  `json:"cpuName"`
 	CpuMhz               float64 `json:"cpuMhz"`
 	FSType               string  `json:"fsType"`
@@ -60,6 +61,8 @@ type StatsResponse struct {
 
 func fetchStats(ctx context.Context) StatsResponse {
 	cpuInfos, _ := cpu.InfoWithContext(ctx)
+	coreCount, _ := cpu.CountsWithContext(ctx, false)
+	threadCount, _ := cpu.CountsWithContext(ctx, true)
 	cpuPercentages, _ := cpu.PercentWithContext(ctx, time.Second, false)
 	virtualMemory, _ := mem.VirtualMemoryWithContext(ctx)
 	hostInfo, _ := host.InfoWithContext(ctx)
@@ -80,7 +83,8 @@ func fetchStats(ctx context.Context) StatsResponse {
 			UsedGbs:     math.Round(float64(virtualMemory.Used)/1e9*100) / 100,
 		},
 		HostInfo: HostInfo{
-			CpuCores:             cpuInfos[0].Cores,
+			CpuCores:             coreCount,
+			CpuThreads:           threadCount,
 			CpuName:              cpuInfos[0].ModelName,
 			CpuMhz:               cpuInfos[0].Mhz,
 			FSType:               diskStat.Fstype,

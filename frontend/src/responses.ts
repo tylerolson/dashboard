@@ -16,6 +16,7 @@ export interface MemStat {
 
 export interface HostInfo {
   cpuCores: number;
+  cpuThreads: number;
   cpuName: string;
   cpuMhz: number;
   fsType: string;
