@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/common"
@@ -14,6 +16,7 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
+	"github.com/shirou/gopsutil/v4/sensors"
 )
 
 type CpuStat struct {
@@ -64,9 +67,20 @@ func fetchStats(ctx context.Context) StatsResponse {
 	coreCount, _ := cpu.CountsWithContext(ctx, false)
 	threadCount, _ := cpu.CountsWithContext(ctx, true)
 	cpuPercentages, _ := cpu.PercentWithContext(ctx, time.Second, false)
-	virtualMemory, _ := mem.VirtualMemoryWithContext(ctx)
-	hostInfo, _ := host.InfoWithContext(ctx)
 	diskStat, _ := disk.UsageWithContext(ctx, "/")
+	virtualMemory, _ := mem.VirtualMemoryWithContext(ctx)
+	tempStat, _ := sensors.TemperaturesWithContext(ctx)
+	hostInfo, _ := host.InfoWithContext(ctx)
+
+	fmt.Println("Sensors:")
+
+	sort.Slice(tempStat, func(i, j int) bool {
+		return tempStat[i].SensorKey < tempStat[j].SensorKey
+	})
+
+	for _, t := range tempStat {
+		fmt.Printf("%s: %.2f°C\n", t.SensorKey, t.Temperature)
+	}
 
 	response := StatsResponse{
 		CpuStat: CpuStat{
@@ -122,7 +136,10 @@ func getStatsHandler(ctx context.Context) http.HandlerFunc {
 func main() {
 	PORT := os.Getenv("PORT")
 	if PORT == "" {
+		slog.Info("Could not find PORT, setting to 80")
 		PORT = "80"
+	} else {
+		slog.Info("Found PORT " + PORT)
 	}
 
 	env := common.EnvMap{}
@@ -131,6 +148,9 @@ func main() {
 	}
 	if sys := os.Getenv("HOST_SYS"); sys != "" {
 		env[common.HostSysEnvKey] = sys
+	}
+	if etc := os.Getenv("HOST_ETC"); etc != "" {
+		env[common.HostEtcEnvKey] = etc
 	}
 	ctx := context.WithValue(context.Background(), common.EnvKey, env)
 
