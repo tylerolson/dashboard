@@ -3,6 +3,7 @@ import StatItem from "@/components/StatItem.vue";
 import HostInfoItem from "@/components/HostInfoItem.vue";
 import { useStatStore } from "@/stores/statStore.ts";
 import { storeToRefs } from "pinia";
+import TempItem from "./TempItem.vue";
 
 const statStore = useStatStore();
 const { stats } = storeToRefs(statStore);
@@ -17,6 +18,7 @@ const { stats } = storeToRefs(statStore);
       <StatItem title="Cpu" :stat="stats.cpuStat"></StatItem>
       <StatItem title="Disk" :stat="stats.diskStat"></StatItem>
       <StatItem title="Memory" :stat="stats.memStat"></StatItem>
+      <TempItem v-for="temp in stats.tempStat" :stat="temp" :key="temp.sensorKey"></TempItem>
     </div>
     <div
       v-if="stats != undefined"

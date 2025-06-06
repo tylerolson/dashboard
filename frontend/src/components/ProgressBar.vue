@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { progress } = defineProps<{
   progress: number;
+  unit: string;
 }>();
 
 function getBarColor(progress: number) {
@@ -18,7 +19,7 @@ function getBarColor(progress: number) {
       :class="getBarColor(progress)"
       :style="{ width: progress + '%' }"
     >
-      {{ progress }}%
+      {{ progress }}{{ unit }}
     </div>
   </div>
 </template>

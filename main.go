@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
 	"os"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/common"
@@ -18,6 +19,8 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/sensors"
 )
+
+type Config map[string]bool
 
 type CpuStat struct {
 	UsedPercent float64 `json:"usedPercent"`
@@ -56,31 +59,23 @@ type HostInfo struct {
 }
 
 type StatsResponse struct {
-	CpuStat  CpuStat  `json:"cpuStat"`
-	DiskStat DiskStat `json:"diskStat"`
-	MemStat  MemStat  `json:"memStat"`
-	HostInfo HostInfo `json:"hostInfo"`
+	CpuStat  CpuStat                   `json:"cpuStat"`
+	DiskStat DiskStat                  `json:"diskStat"`
+	MemStat  MemStat                   `json:"memStat"`
+	HostInfo HostInfo                  `json:"hostInfo"`
+	TempStat []sensors.TemperatureStat `json:"tempStat"`
 }
 
-func fetchStats(ctx context.Context) StatsResponse {
+func fetchStats(ctx context.Context, config Config) StatsResponse {
 	cpuInfos, _ := cpu.InfoWithContext(ctx)
 	coreCount, _ := cpu.CountsWithContext(ctx, false)
 	threadCount, _ := cpu.CountsWithContext(ctx, true)
 	cpuPercentages, _ := cpu.PercentWithContext(ctx, time.Second, false)
 	diskStat, _ := disk.UsageWithContext(ctx, "/")
 	virtualMemory, _ := mem.VirtualMemoryWithContext(ctx)
-	tempStat, _ := sensors.TemperaturesWithContext(ctx)
 	hostInfo, _ := host.InfoWithContext(ctx)
 
-	fmt.Println("Sensors:")
-
-	sort.Slice(tempStat, func(i, j int) bool {
-		return tempStat[i].SensorKey < tempStat[j].SensorKey
-	})
-
-	for _, t := range tempStat {
-		fmt.Printf("%s: %.2f°C\n", t.SensorKey, t.Temperature)
-	}
+	tempStat, _ := sensors.TemperaturesWithContext(ctx)
 
 	response := StatsResponse{
 		CpuStat: CpuStat{
@@ -117,12 +112,25 @@ func fetchStats(ctx context.Context) StatsResponse {
 		},
 	}
 
+	tempToUse := make([]sensors.TemperatureStat, 0)
+	for _, v := range tempStat {
+		if config[v.SensorKey] {
+			tempToUse = append(tempToUse, v)
+		}
+	}
+
+	slices.SortFunc(tempToUse, func(a, b sensors.TemperatureStat) int {
+		return strings.Compare(strings.ToLower(a.SensorKey), strings.ToLower(b.SensorKey))
+	})
+
+	response.TempStat = tempToUse
+
 	return response
 }
 
-func getStatsHandler(ctx context.Context) http.HandlerFunc {
+func getStatsHandler(ctx context.Context, config Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		response := fetchStats(ctx)
+		response := fetchStats(ctx, config)
 
 		w.Header().Set("Content-Type", "application/json")
 		err := json.NewEncoder(w).Encode(response)
@@ -133,7 +141,55 @@ func getStatsHandler(ctx context.Context) http.HandlerFunc {
 	}
 }
 
+func configNotExist() bool {
+	_, err := os.Stat("config.json")
+	return os.IsNotExist(err)
+}
+
+func readConfig() (Config, error) {
+	fileData, err := os.ReadFile("config.json")
+	if err != nil {
+		return nil, err
+	}
+
+	config := make(Config)
+
+	err = json.Unmarshal(fileData, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+func createConfig(ctx context.Context) error {
+	temps, _ := sensors.TemperaturesWithContext(ctx)
+
+	sort.Slice(temps, func(i, j int) bool {
+		return temps[i].SensorKey < temps[j].SensorKey
+	})
+
+	configMap := make(Config)
+	for _, value := range temps {
+		configMap[value.SensorKey] = false
+	}
+
+	jsonData, err := json.MarshalIndent(configMap, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	filePath := "config.json"
+	err = os.WriteFile(filePath, jsonData, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
+	// Set port
 	PORT := os.Getenv("PORT")
 	if PORT == "" {
 		slog.Info("Could not find PORT, setting to 80")
@@ -142,19 +198,41 @@ func main() {
 		slog.Info("Found PORT " + PORT)
 	}
 
+	// Get host env variables
 	env := common.EnvMap{}
 	if proc := os.Getenv("HOST_PROC"); proc != "" {
 		env[common.HostProcEnvKey] = proc
+		slog.Info("Found HOST_PROC", "key", proc)
 	}
 	if sys := os.Getenv("HOST_SYS"); sys != "" {
 		env[common.HostSysEnvKey] = sys
+		slog.Info("Found HOST_SYS", "key", sys)
 	}
 	if etc := os.Getenv("HOST_ETC"); etc != "" {
 		env[common.HostEtcEnvKey] = etc
+		slog.Info("Found HOST_ETC", "key", etc)
 	}
 	ctx := context.WithValue(context.Background(), common.EnvKey, env)
 
-	http.HandleFunc("/api/stats", getStatsHandler(ctx))
+	if configNotExist() {
+		slog.Info("Config does not exist, creating it now")
+
+		err := createConfig(ctx)
+		if err != nil {
+			slog.Error("error creating config", "error", err)
+		}
+
+		slog.Info("Created config")
+	}
+
+	config, err := readConfig()
+	if err != nil {
+		slog.Error("error reading config", "error", err)
+	}
+
+	slog.Info("Found config")
+
+	http.HandleFunc("/api/stats", getStatsHandler(ctx, config))
 
 	fs := http.FileServer(http.Dir("frontend/dist"))
 	http.Handle("/", fs)

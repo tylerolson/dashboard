@@ -34,9 +34,17 @@ export interface HostInfo {
   virtualizationRole: string;
 }
 
+export interface TemperatureStat {
+  sensorKey: string;
+  temperature: number;
+  sensorHigh: number;
+  sensorCritical: number;
+}
+
 export interface StatsResponse {
   cpuStat: CpuStat;
   diskStat: DiskStat;
   memStat: MemStat;
   hostInfo: HostInfo;
+  tempStat: TemperatureStat[];
 }
