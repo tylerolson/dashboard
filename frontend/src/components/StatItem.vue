@@ -15,7 +15,7 @@ const { stat } = defineProps<{
       <span v-if="'usedGbs' in stat && 'totalGbs' in stat">
         {{ stat.usedGbs }} GB of {{ stat.totalGbs }} GB used
       </span>
-      <span v-else> Cpu Usage </span>
+      <span v-else>Cpu Usage</span>
     </p>
     <ProgressBar :progress="stat.usedPercent" unit="%"></ProgressBar>
   </GridItem>
